@@ -1,8 +1,9 @@
 python main.py \
 --synthetic_train_data_dir /lmdb/train \
 --test_data_dir /lmdb/valid \
---batch_size 100 \
---print_freq 10 \
+--voc_file /lmdb/korean_vocab.txt \
+--batch_size 512 \
+--print_freq 100 \
 --epochs 10000 \
 --workers 8 --height 64 --width 256 \
 --voc_type ALLCASES_SYMBOLS \
