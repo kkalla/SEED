@@ -72,25 +72,40 @@ def get_data_txt(data_dir,
     return dataset, data_loader
 
 
-def get_data_lmdb(data_dir, voc_type, max_len, num_samples, height, width, batch_size, workers, is_train, keep_ratio):
+def get_data_lmdb(data_dir, voc_type,
+                  max_len, num_samples,
+                  height, width, batch_size,
+                  workers, is_train, keep_ratio, voc_file=None):
     if isinstance(data_dir, list):
         dataset_list = []
         for data_dir_ in data_dir:
             dataset_list.append(LmdbDataset(
-                data_dir_, voc_type, max_len, num_samples))
+                data_dir_, voc_type, max_len, num_samples, voc_file))
         dataset = ConcatDataset(dataset_list)
     else:
-        dataset = LmdbDataset(data_dir, voc_type, max_len, num_samples)
+        dataset = LmdbDataset(data_dir, voc_type, max_len,
+                              num_samples, voc_file)
     print('total image: ', len(dataset))
 
     if is_train:
-        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=workers,
-                                 shuffle=True, pin_memory=True, drop_last=True,
-                                 collate_fn=AlignCollate(imgH=height, imgW=width, keep_ratio=keep_ratio))
+        data_loader = DataLoader(
+            dataset, batch_size=batch_size,
+            num_workers=workers,
+            shuffle=True, pin_memory=True, drop_last=True,
+            collate_fn=AlignCollate(imgH=height,
+                                    imgW=width,
+                                    keep_ratio=keep_ratio)
+        )
     else:
-        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=workers,
-                                 shuffle=False, pin_memory=True, drop_last=False,
-                                 collate_fn=AlignCollate(imgH=height, imgW=width, keep_ratio=keep_ratio))
+        data_loader = DataLoader(
+            dataset, batch_size=batch_size,
+            num_workers=workers,
+            shuffle=False, pin_memory=True,
+            drop_last=False,
+            collate_fn=AlignCollate(imgH=height,
+                                    imgW=width,
+                                    keep_ratio=keep_ratio)
+        )
 
     return dataset, data_loader
 
@@ -171,11 +186,19 @@ def main(args):
           get_data_txt(args.synthetic_train_data_dir, args.train_data_gt, args.train_embed_dir, args.voc_type, args.max_len, args.num_train,
                    args.height, args.width, args.batch_size, args.workers, True, args.keep_ratio)
         """
-        train_dataset, train_loader = get_data_lmdb(args.synthetic_train_data_dir, args.voc_type, args.max_len, args.num_train,
-                                                    args.height, args.width, args.batch_size, args.workers, True, args.keep_ratio)
+        train_dataset, train_loader = get_data_lmdb(
+            args.synthetic_train_data_dir, args.voc_type,
+            args.max_len, args.num_train,
+            args.height, args.width, args.batch_size,
+            args.workers, True, args.keep_ratio, args.voc_file
+        )
 
-    test_dataset, test_loader = get_data_lmdb(args.test_data_dir, args.voc_type, args.max_len, args.num_test, args.height,
-                                              args.width, args.batch_size, args.workers, False, args.keep_ratio)
+    test_dataset, test_loader = get_data_lmdb(
+        args.test_data_dir, args.voc_type,
+        args.max_len, args.num_test, args.height,
+        args.width, args.batch_size, args.workers,
+        False, args.keep_ratio, args.voc_file
+    )
 
     if args.evaluate:
         max_len = test_dataset.max_len

@@ -167,7 +167,8 @@ class CustomDataset(data.Dataset):
 
 
 class LmdbDataset(data.Dataset):
-    def __init__(self, root, voc_type, max_len, num_samples, transform=None):
+    def __init__(self, root, voc_type, max_len, num_samples, transform=None,
+                 voc_file=None):
         super(LmdbDataset, self).__init__()
 
         if global_args.run_on_remote:
@@ -199,6 +200,11 @@ class LmdbDataset(data.Dataset):
         self.UNKNOWN = 'UNKNOWN'
         self.voc = get_vocabulary(
             voc_type, EOS=self.EOS, PADDING=self.PADDING, UNKNOWN=self.UNKNOWN)
+        if voc_file is not None:
+            with open(voc_file, "r", encoding="utf-8-sig") as f:
+                self.voc_custom = list(f.read())
+            for vc in self.voc_custom:
+                self.voc.append(vc)
         self.char2id = dict(zip(self.voc, range(len(self.voc))))
         self.id2char = dict(zip(range(len(self.voc)), self.voc))
 
@@ -357,7 +363,6 @@ def debug():
         collate_fn=AlignCollate(imgH=64, imgW=256, keep_ratio=False))
     for i, (images, labels, lengths, masks) in enumerate(train_dataloader):
         print(i)
-
 
         # images = images.permute(0, 2, 3, 1)
         # images = to_numpy(images)

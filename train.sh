@@ -1,6 +1,7 @@
 python main.py \
 --synthetic_train_data_dir /lmdb/train \
 --test_data_dir /lmdb/valid \
+--voc_file /lmdb/korean_vocab.txt \
 --batch_size 512 \
 --print_freq 100 \
 --epochs 10000 \

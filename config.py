@@ -38,6 +38,7 @@ parser.add_argument('--image_path', type=str, default='',
                     help='the path of single image, used in demo.py.')
 parser.add_argument('--tps_inputsize', nargs='+', type=int, default=[32, 64])
 parser.add_argument('--tps_outputsize', nargs='+', type=int, default=[32, 100])
+parser.add_argument('--voc_file', type=str, default=None)
 # model
 parser.add_argument('-a', '--arch', type=str, default='ResNet_ASTER')
 parser.add_argument('--dropout', type=float, default=0.5)
