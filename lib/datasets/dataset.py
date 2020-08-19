@@ -199,12 +199,10 @@ class LmdbDataset(data.Dataset):
         self.PADDING = 'PADDING'
         self.UNKNOWN = 'UNKNOWN'
         self.voc = get_vocabulary(
-            voc_type, EOS=self.EOS, PADDING=self.PADDING, UNKNOWN=self.UNKNOWN)
-        if voc_file is not None:
-            with open(voc_file, "r", encoding="utf-8-sig") as f:
-                self.voc_custom = list(f.read())
-            for vc in self.voc_custom:
-                self.voc.append(vc)
+            voc_type, EOS=self.EOS,
+            PADDING=self.PADDING, UNKNOWN=self.UNKNOWN,
+            voc_file=voc_file
+        )
         self.char2id = dict(zip(self.voc, range(len(self.voc))))
         self.id2char = dict(zip(range(len(self.voc)), self.voc))
 

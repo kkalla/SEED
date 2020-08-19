@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from ..evaluation_metrics.metrics import get_str_list
 from . import to_torch, to_numpy
 from torch.nn import functional as F
+from tqdm import tqdm
 import torch
 import sys
 import math
@@ -39,7 +40,7 @@ def recognition_vis(images, preds, targets, scores, dataset, vis_dir):
 # save to disk sub process
 def _save_plot_pool(vis_image, save_file_path):
     vis_image = Image.fromarray(np.uint8(vis_image))
-    vis_image.save(save_file_path)
+    vis_image.save(unicode(save_file_path))
 
 
 def stn_vis(raw_images, rectified_images, ctrl_points, preds, targets, real_scores, pred_scores, dataset, vis_dir):
@@ -78,7 +79,7 @@ def stn_vis(raw_images, rectified_images, ctrl_points, preds, targets, real_scor
     num_sub_plot = 2
     raw_images = raw_images.astype(np.uint8)
     rectified_images = rectified_images.astype(np.uint8)
-    for i in range(batch_size):
+    for i in tqdm(range(batch_size)):
         fig = plt.figure()
         ax = [fig.add_subplot(num_sub_plot, 1, i+1)
               for i in range(num_sub_plot)]
