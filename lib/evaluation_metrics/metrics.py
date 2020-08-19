@@ -59,8 +59,8 @@ def get_str_list(output, target, dataset=None):
         pred_list = [_normalize_text(pred) for pred in pred_list]
         targ_list = [_normalize_text(targ) for targ in targ_list]
     else:
-        pred_list = [''.join(pred) for pred in pred_list]
-        targ_list = [''.join(targ) for targ in targ_list]
+        pred_list = [u''.join(pred) for pred in pred_list]
+        targ_list = [u''.join(targ) for targ in targ_list]
 
     return pred_list, targ_list
 

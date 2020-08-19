@@ -61,9 +61,13 @@ def get_data_txt(data_dir,
           shuffle=True, pin_memory=True, drop_last=True,
           collate_fn=AlignCollate(imgH=height, imgW=width, keep_ratio=keep_ratio))
         """
-        data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=workers,
+        data_loader = DataLoader(dataset, batch_size=batch_size,
+                                 num_workers=workers,
                                  shuffle=True, pin_memory=True, drop_last=True,
-                                 collate_fn=AlignCollate(imgH=height, imgW=width, keep_ratio=keep_ratio))
+                                 collate_fn=AlignCollate(
+                                     imgH=height,
+                                     imgW=width,
+                                     keep_ratio=keep_ratio))
     else:
         data_loader = DataLoader(dataset, batch_size=batch_size, num_workers=workers,
                                  shuffle=False, pin_memory=True, drop_last=False,
@@ -213,9 +217,13 @@ def main(args):
         max_len = max(train_dataset.max_len, test_dataset.max_len)
         train_dataset.max_len = test_dataset.max_len = max_len
     # Create model
-    model = ModelBuilder(arch=args.arch, rec_num_classes=test_dataset.rec_num_classes,
-                         sDim=args.decoder_sdim, attDim=args.attDim, max_len_labels=max_len,
-                         eos=test_dataset.char2id[test_dataset.EOS], STN_ON=args.STN_ON)
+    model = ModelBuilder(arch=args.arch,
+                         rec_num_classes=test_dataset.rec_num_classes,
+                         sDim=args.decoder_sdim,
+                         attDim=args.attDim,
+                         max_len_labels=max_len,
+                         eos=test_dataset.char2id[test_dataset.EOS],
+                         STN_ON=args.STN_ON)
 
     # Load from checkpoint
     if args.evaluation_metric == 'accuracy':

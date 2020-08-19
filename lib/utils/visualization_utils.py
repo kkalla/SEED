@@ -40,10 +40,11 @@ def recognition_vis(images, preds, targets, scores, dataset, vis_dir):
 # save to disk sub process
 def _save_plot_pool(vis_image, save_file_path):
     vis_image = Image.fromarray(np.uint8(vis_image))
-    vis_image.save(unicode(save_file_path))
+    vis_image.save(save_file_path)
 
 
-def stn_vis(raw_images, rectified_images, ctrl_points, preds, targets, real_scores, pred_scores, dataset, vis_dir):
+def stn_vis(raw_images, rectified_images, ctrl_points,
+            preds, targets, real_scores, pred_scores, dataset, vis_dir):
     """
       raw_images: images without rectification
       rectified_images: rectified images with stn
@@ -109,19 +110,26 @@ def stn_vis(raw_images, rectified_images, ctrl_points, preds, targets, real_scor
     else:
         pred_list, targ_list = get_str_list(preds, targets, dataset)
         file_path_list = []
-        for id, (image, pred, target, real_score) in enumerate(zip(vis_images, pred_list, targ_list, real_scores)):
+        file_writer = open(f"{vis_dir}/result_texts.txt",
+                           'w', encoding='utf-8')
+        file_writer.write(f"file_name\tpred_string\ttarget_string\n")
+        for id, (image, pred, target, real_score) in enumerate(
+                zip(vis_images, pred_list, targ_list, real_scores)):
             if pred.lower() == target.lower():
                 flag = 'right'
             else:
                 flag = 'error'
             if pred_scores is None:
-                file_name = '{:}_{:}_{:}_{:}_{:.3f}.png'.format(
-                    flag, id, pred, target, real_score)
+                file_name = '{:}_{:}_{:.3f}.png'.format(
+                    flag, id, real_score)
             else:
-                file_name = '{:}_{:}_{:}_{:}_{:.3f}_{:.3f}.png'.format(
-                    flag, id, pred, target, real_score, pred_scores[id])
+                file_name = '{:}_{:}_{:.3f}_{:.3f}.png'.format(
+                    flag, id, real_score, pred_scores[id])
+            file_name = file_name
             file_path = os.path.join(vis_dir, file_name)
             file_path_list.append(file_path)
+            file_writer.write(f"{file_name}\t{pred}\t{target}\n")
+        file_writer.close()
 
         with Pool(os.cpu_count()) as pool:
             pool.starmap(_save_plot_pool, zip(vis_images, file_path_list))

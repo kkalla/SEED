@@ -20,91 +20,102 @@ global_args = get_args(sys.argv[1:])
 
 
 class ModelBuilder(nn.Module):
-  """
-  This is the integrated model.
-  """
-  def __init__(self, arch, rec_num_classes, sDim, attDim, max_len_labels, eos, time_step=25, STN_ON=False):
-    super(ModelBuilder, self).__init__()
+    """
+    This is the integrated model.
+    """
 
-    self.arch = arch
-    self.rec_num_classes = rec_num_classes
-    self.sDim = sDim
-    self.attDim = attDim
-    self.max_len_labels = max_len_labels
-    self.eos = eos
-    self.STN_ON = STN_ON
-    self.time_step = time_step
-    self.tps_inputsize = global_args.tps_inputsize
+    def __init__(self, arch,
+                 rec_num_classes,
+                 sDim, attDim,
+                 max_len_labels,
+                 eos,
+                 time_step=25,
+                 STN_ON=False):
+        super(ModelBuilder, self).__init__()
 
-    self.encoder = create(self.arch,
-                      with_lstm=global_args.with_lstm,
-                      n_group=global_args.n_group)
-    encoder_out_planes = self.encoder.out_planes
+        self.arch = arch
+        self.rec_num_classes = rec_num_classes
+        self.sDim = sDim
+        self.attDim = attDim
+        self.max_len_labels = max_len_labels
+        self.eos = eos
+        self.STN_ON = STN_ON
+        self.time_step = time_step
+        self.tps_inputsize = global_args.tps_inputsize
 
-    self.decoder = AttentionRecognitionHead(
-                      num_classes=rec_num_classes,
-                      in_planes=encoder_out_planes,
-                      sDim=sDim,
-                      attDim=attDim,
-                      max_len_labels=max_len_labels)
-    self.embeder = Embedding(self.time_step, encoder_out_planes)
-    # self.embeder = Embedding_self_att(self.time_step, encoder_out_planes, n_head=4, n_layers=4)
-    self.rec_crit = SequenceCrossEntropyLoss()
-    self.embed_crit = EmbeddingRegressionLoss(loss_func='cosin')
+        self.encoder = create(self.arch,
+                              with_lstm=global_args.with_lstm,
+                              n_group=global_args.n_group)
+        encoder_out_planes = self.encoder.out_planes
 
-    if self.STN_ON:
-      self.tps = TPSSpatialTransformer(
-        output_image_size=tuple(global_args.tps_outputsize),
-        num_control_points=global_args.num_control_points,
-        margins=tuple(global_args.tps_margins))
-      self.stn_head = STNHead(
-        in_planes=3,
-        num_ctrlpoints=global_args.num_control_points,
-        activation=global_args.stn_activation)
+        self.decoder = AttentionRecognitionHead(
+            num_classes=rec_num_classes,
+            in_planes=encoder_out_planes,
+            sDim=sDim,
+            attDim=attDim,
+            max_len_labels=max_len_labels)
+        self.embeder = Embedding(self.time_step, encoder_out_planes)
+        # self.embeder = Embedding_self_att(self.time_step, encoder_out_planes, n_head=4, n_layers=4)
+        self.rec_crit = SequenceCrossEntropyLoss()
+        self.embed_crit = EmbeddingRegressionLoss(loss_func='cosin')
 
-  def forward(self, input_dict):
-    return_dict = {}
-    return_dict['losses'] = {}
-    return_dict['output'] = {}
+        if self.STN_ON:
+            self.tps = TPSSpatialTransformer(
+                output_image_size=tuple(global_args.tps_outputsize),
+                num_control_points=global_args.num_control_points,
+                margins=tuple(global_args.tps_margins))
+            self.stn_head = STNHead(
+                in_planes=3,
+                num_ctrlpoints=global_args.num_control_points,
+                activation=global_args.stn_activation)
 
-    x, rec_targets, rec_lengths, rec_embeds = input_dict['images'], \
-                                              input_dict['rec_targets'], \
-                                              input_dict['rec_lengths'], \
-                                              input_dict['rec_embeds']
+    def forward(self, input_dict):
+        return_dict = {}
+        return_dict['losses'] = {}
+        return_dict['output'] = {}
 
-    # rectification
-    if self.STN_ON:
-      # input images are downsampled before being fed into stn_head.
-      stn_input = F.interpolate(x, self.tps_inputsize, mode='bilinear', align_corners=True)
-      stn_img_feat, ctrl_points = self.stn_head(stn_input)
-      x, _ = self.tps(x, ctrl_points)
-      if not self.training:
-        # save for visualization
-        return_dict['output']['ctrl_points'] = ctrl_points
-        return_dict['output']['rectified_images'] = x
+        x, rec_targets, rec_lengths, rec_embeds = input_dict['images'], \
+            input_dict['rec_targets'], \
+            input_dict['rec_lengths'], \
+            input_dict['rec_embeds']
 
-    encoder_feats = self.encoder(x)
-    encoder_feats = encoder_feats.contiguous()
-    embedding_vectors = self.embeder(encoder_feats)
-    if self.training:
-      rec_pred = self.decoder([encoder_feats, rec_targets, rec_lengths], embedding_vectors)
-      loss_rec = self.rec_crit(rec_pred, rec_targets, rec_lengths)
-      loss_embed = self.embed_crit(embedding_vectors, rec_embeds)
-      return_dict['losses']['loss_rec'] = loss_rec
-      return_dict['losses']['loss_embed'] = loss_embed
-    else:
-      rec_pred, rec_pred_scores = self.decoder.beam_search(encoder_feats, global_args.beam_width, self.eos, embedding_vectors)
-      rec_pred_ = self.decoder([encoder_feats, rec_targets, rec_lengths], embedding_vectors)
-      loss_rec = self.rec_crit(rec_pred_, rec_targets, rec_lengths)
-      loss_embed = self.embed_crit(embedding_vectors, rec_embeds)
-      return_dict['losses']['loss_rec'] = loss_rec
-      return_dict['losses']['loss_embed'] = loss_embed
-      return_dict['output']['pred_rec'] = rec_pred
-      return_dict['output']['pred_embed'] = embedding_vectors
-      return_dict['output']['pred_rec_score'] = rec_pred_scores
+        # rectification
+        if self.STN_ON:
+            # input images are downsampled before being fed into stn_head.
+            stn_input = F.interpolate(
+                x, self.tps_inputsize, mode='bilinear', align_corners=True)
+            stn_img_feat, ctrl_points = self.stn_head(stn_input)
+            x, _ = self.tps(x, ctrl_points)
+            if not self.training:
+                # save for visualization
+                return_dict['output']['ctrl_points'] = ctrl_points
+                return_dict['output']['rectified_images'] = x
 
-    # pytorch0.4 bug on gathering scalar(0-dim) tensors
-    for k, v in return_dict['losses'].items():
-      return_dict['losses'][k] = v.unsqueeze(0)
+        encoder_feats = self.encoder(x)
+        encoder_feats = encoder_feats.contiguous()
+        embedding_vectors = self.embeder(encoder_feats)
+        if self.training:
+            rec_pred = self.decoder(
+                [encoder_feats, rec_targets, rec_lengths], embedding_vectors)
+            loss_rec = self.rec_crit(rec_pred, rec_targets, rec_lengths)
+            loss_embed = self.embed_crit(embedding_vectors, rec_embeds)
+            return_dict['losses']['loss_rec'] = loss_rec
+            return_dict['losses']['loss_embed'] = loss_embed
+        else:
+            rec_pred, rec_pred_scores = self.decoder.beam_search(
+                encoder_feats, global_args.beam_width, self.eos, embedding_vectors)
+            rec_pred_ = self.decoder(
+                [encoder_feats, rec_targets, rec_lengths], embedding_vectors)
+            loss_rec = self.rec_crit(rec_pred_, rec_targets, rec_lengths)
+            loss_embed = self.embed_crit(embedding_vectors, rec_embeds)
+            return_dict['losses']['loss_rec'] = loss_rec
+            return_dict['losses']['loss_embed'] = loss_embed
+            return_dict['output']['pred_rec'] = rec_pred
+            return_dict['output']['pred_embed'] = embedding_vectors
+            return_dict['output']['pred_rec_score'] = rec_pred_scores
 
-    return return_dict
+        # pytorch0.4 bug on gathering scalar(0-dim) tensors
+        for k, v in return_dict['losses'].items():
+            return_dict['losses'][k] = v.unsqueeze(0)
+
+        return return_dict
